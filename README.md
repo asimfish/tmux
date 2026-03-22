@@ -151,3 +151,166 @@ tmux kill-session -t 工作
 - 拖拽调整 pane 大小
 - 滚轮滚动历史
 - 拖选文字自动复制到剪贴板
+
+---
+
+## 用 tmux + Claude Code 管理多项目
+
+tmux 和 Claude Code 组合使用，可以让你同时驾驭多个项目，每个项目有独立的工作空间，Claude 在后台持续工作，你随时切换查看进度。
+
+---
+
+### 核心思路
+
+```
+一个 Session  =  一个大方向（如：工作 / 个人 / 实验）
+一个 Window   =  一个项目
+一个 Pane     =  一个角色（代码 / Claude / 日志）
+```
+
+这样无论同时跑几个项目，都井井有条，不会混乱。
+
+---
+
+### 推荐布局：单项目三格分屏
+
+```
+┌─────────────────────┬──────────────────┐
+│                     │                  │
+│   代码编辑 / 终端    │   Claude Code    │
+│   （主工作区）       │   （AI 助手）     │
+│                     │                  │
+├─────────────────────┴──────────────────┤
+│         日志 / 测试输出 / Git 状态       │
+└────────────────────────────────────────┘
+```
+
+**搭建步骤：**
+
+```bash
+# 1. 新建项目 session
+tmux new -s robot
+
+# 2. 左右分栏：左边写代码，右边开 Claude
+Ctrl-w |
+
+# 3. 切到左侧，再上下分栏，底部放日志
+Ctrl-w h
+Ctrl-w -
+
+# 4. 切到右侧 pane，启动 Claude Code
+Ctrl-w l
+claude
+```
+
+---
+
+### 多项目并行工作流
+
+每个项目开一个 **window**，Claude 在各自的 pane 里独立运行，互不干扰。
+
+```bash
+# 在 robot session 里建多个 window
+tmux new-window -n robot-nav    # 导航模块
+tmux new-window -n robot-arm    # 机械臂模块
+tmux new-window -n robot-vision # 视觉模块
+```
+
+状态栏效果：
+```
+[robot]  1:robot-nav  2:robot-arm  ●3:robot-vision
+                                    ↑ 当前窗口，黄色高亮
+```
+
+在任意 window 按 `Ctrl-w w` 弹出列表，一眼选择目标项目。
+
+---
+
+### 典型工作场景
+
+#### 场景一：让 Claude 在后台跑任务，你去做别的
+
+```bash
+# 在 pane 右侧启动 Claude，交代任务
+claude
+> 帮我重构 src/controller.py，完成后告诉我
+
+# 切到左侧 pane 继续写代码（Claude 同步工作）
+Ctrl-w h
+
+# 想看 Claude 进度时，切回去
+Ctrl-w l
+```
+
+#### 场景二：多项目同时推进
+
+```bash
+# window 1：robot-nav，Claude 正在写导航算法
+Ctrl-w c   # 新建 window 2
+
+# window 2：robot-arm，你在调试机械臂
+# ... 调试中 ...
+
+# 切回 window 1 看 Claude 是否完成
+Ctrl-w p
+```
+
+#### 场景三：跨 session 管理工作与个人项目
+
+```bash
+# 工作 session（白天）
+tmux new -s work
+
+# 个人项目 session（晚上）
+tmux new -s side
+
+# 两个 session 之间随时切换，互不影响
+Ctrl-w s   # 弹出 session 列表选择
+```
+
+---
+
+### 在 tmux 里高效使用 Claude Code
+
+| 操作 | 方法 |
+|------|------|
+| 查看 Claude 输出历史 | `Ctrl-w [` 进入复制模式，向上滚动 |
+| 复制 Claude 的代码 | 复制模式下 `v` 选中，`y` 复制到剪贴板 |
+| 把代码粘贴给 Claude | 终端直接 `Ctrl-v`（或 `Cmd-v`）|
+| 放大 Claude 窗口查看 | `Ctrl-w z` 最大化当前 pane，再按还原 |
+| 临时离开保持 Claude 运行 | `Ctrl-w d` detach，Claude 继续在后台跑 |
+| 回来查看结果 | `tmux attach -t session名` |
+
+---
+
+### 推荐的 Session 命名规范
+
+```bash
+tmux new -s work      # 工作项目
+tmux new -s robot     # 机器人项目
+tmux new -s exp       # 实验 / 探索
+tmux new -s tmp       # 临时任务（用完 kill）
+```
+
+Window 命名建议与模块/功能对应，方便状态栏一眼识别：
+
+```bash
+Ctrl-w ,   # 重命名当前 window
+# 例：nav / arm / vision / train / server / git
+```
+
+---
+
+### 快照：随时保存，重启无忧
+
+项目跑到一半需要重启电脑？不用担心：
+
+```bash
+# 手动保存当前所有 session / window / pane 布局
+Ctrl-w Ctrl-s
+
+# 重启后恢复一切（包括 Claude Code 的工作目录）
+Ctrl-w Ctrl-r
+```
+
+> `tmux-continuum` 插件会每隔 15 分钟自动保存一次，开机也会自动恢复，基本无需手动操作。
