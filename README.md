@@ -89,6 +89,7 @@ tmux source ~/.tmux.conf
 | 快捷键 | 功能 |
 |--------|------|
 | `Prefix r` | 重新加载配置文件 |
+| `Prefix d` | 暂时退出 tmux（detach，session 保持后台运行）|
 
 ---
 
@@ -125,6 +126,9 @@ tmux attach -t 工作
 
 # 分离当前 session（保持后台运行）
 # Prefix d
+
+# 关闭指定 window
+tmux kill-window -t 工作:1
 
 # 在 session 外杀掉指定 session
 tmux kill-session -t 工作
