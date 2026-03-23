@@ -123,6 +123,7 @@ Ctrl-w -
 | 文档 | 内容 |
 |------|------|
 | [架构详解](docs/architecture.md) | 三层结构图解、布局模板、设计原则 |
+| [Ghostty 终端配置](docs/ghostty.md) | GPU 加速终端、Quick Terminal、与 tmux 分工 |
 | [Claude Code 工作流](docs/claude-code.md) | 多项目并行、后台任务、复制粘贴技巧 |
 | [Codex 工作流](docs/codex.md) | 批量任务调度、进度监控、结果汇总 |
 | [OpenClaw 工作流](docs/openclaw.md) | 长任务管理、日志追踪、断线恢复 |
