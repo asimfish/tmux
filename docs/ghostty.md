@@ -21,11 +21,48 @@ graph LR
 
 | 场景 | 推荐工具 |
 |------|----------|
-| 本地分屏 / 多标签 | Ghostty 原生分屏 |
+| 本地分屏 / 多标签 | Ghostty 原生分屏 或 tmux（键位统一后无感）|
 | 随时呼出终端 | Ghostty Quick Terminal |
 | SSH 到服务器后分屏 | tmux |
 | 断开 SSH 后保持 AI 进程 | tmux session |
 | 管理多个 AI 项目工作区 | tmux（配合本指南工作流）|
+
+---
+
+## 键位统一：用 Ghostty 快捷键控制 tmux
+
+通过在 Ghostty 配置里把 `Cmd` 系键位映射为发送 tmux 控制序列（`\x17` = `Ctrl-w`），可以让两套键位**同时有效**：
+
+- **tmux 原生键位完全保留** — `Ctrl-w |`、`Ctrl-w -`、`Ctrl-w h/j/k/l` 照常工作
+- **Ghostty 键位额外生效** — `Cmd+D` 等同样触发 tmux 指令
+
+```ini
+# ~/.config/ghostty/config
+
+# 分屏：Cmd+D → tmux 左右分栏 (Ctrl-w |)
+#       Cmd+Shift+D → tmux 上下分栏 (Ctrl-w -)
+keybind = cmd+d=text:\x17|
+keybind = cmd+shift+d=text:\x17-
+
+# 切换 pane：Cmd+Shift+H/J/K/L → tmux pane 切换
+keybind = cmd+shift+h=text:\x17h
+keybind = cmd+shift+l=text:\x17l
+keybind = cmd+shift+k=text:\x17k
+keybind = cmd+shift+j=text:\x17j
+```
+
+生效后的对照表：
+
+| 操作 | tmux 原生键位 | Ghostty 统一键位 |
+|------|--------------|----------------|
+| 左右分栏 | `Ctrl-w \|` | `Cmd+D` |
+| 上下分栏 | `Ctrl-w -` | `Cmd+Shift+D` |
+| 切左 pane | `Ctrl-w h` | `Cmd+Shift+H` |
+| 切右 pane | `Ctrl-w l` | `Cmd+Shift+L` |
+| 切上 pane | `Ctrl-w k` | `Cmd+Shift+K` |
+| 切下 pane | `Ctrl-w j` | `Cmd+Shift+J` |
+
+> 热重载配置：在 Ghostty 内按 `Cmd+,` 即可立即生效，无需重启。
 
 ---
 
@@ -163,9 +200,9 @@ ghostty +list-themes       # 列出所有内置主题
 
 | 快捷键 | 功能 |
 |--------|------|
-| `Cmd+D` | 右侧分屏 |
-| `Cmd+Shift+D` | 下方分屏 |
-| `Cmd+Shift+H/J/K/L` | 跳转到左/下/上/右分屏（vim 风格）|
+| `Cmd+D` | 右侧分屏 / tmux 左右分栏（键位统一后）|
+| `Cmd+Shift+D` | 下方分屏 / tmux 上下分栏（键位统一后）|
+| `Cmd+Shift+H/J/K/L` | 跳转分屏 / tmux pane 切换（键位统一后）|
 | `Ctrl+Shift+方向键` | 调整分屏大小 |
 | `Cmd+Shift+Enter` | 当前分屏全屏 / 恢复 |
 | `Cmd+Shift+=` | 所有分屏等分 |
