@@ -51,7 +51,7 @@ keybind = cmd+shift+k=text:\x17k
 keybind = cmd+shift+j=text:\x17j
 ```
 
-生效后的对照表：
+生效后的完整对照表：
 
 | 操作 | tmux 原生键位 | Ghostty 统一键位 |
 |------|--------------|----------------|
@@ -61,8 +61,18 @@ keybind = cmd+shift+j=text:\x17j
 | 切右 pane | `Ctrl-w l` | `Cmd+Shift+L` |
 | 切上 pane | `Ctrl-w k` | `Cmd+Shift+K` |
 | 切下 pane | `Ctrl-w j` | `Cmd+Shift+J` |
+| 放大 / 还原 pane | `Ctrl-w z` | `Cmd+Shift+Enter` |
+| 均分所有 pane | `Ctrl-w =` | `Cmd+Shift+=` |
+| 新建 window | `Ctrl-w c` | `Cmd+T` |
+| 关闭 pane | `Ctrl-w x` | `Cmd+W` |
+| 上一个 window | `Ctrl-w p` | `Cmd+Shift+[` |
+| 下一个 window | `Ctrl-w n` | `Cmd+Shift+]` |
+| 调整 pane 大小 | `Ctrl-w ^h/^j/^k/^l` | `Ctrl+Shift+左/下/上/右` |
+| 清屏 + 清历史 | `Ctrl-w K` | `Cmd+K` |
 
 > 热重载配置：在 Ghostty 内按 `Cmd+,` 即可立即生效，无需重启。
+
+> **原则**：所有 Ghostty 键位都是在 tmux 原生键位之上额外添加，两套完全并存，不互相覆盖。
 
 ---
 
