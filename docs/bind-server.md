@@ -288,4 +288,46 @@ ssh my-server "echo ok"
 sshfs --version
 ```
 
-###
+### 挂载后文件读取很慢
+
+通常是网络问题或关闭了缓存。确认挂载选项里有 `auto_cache`，对于大目录避免直接 `ls`，改用 `ssh my-server "ls -lh path"`。
+
+### 断网后挂载目录卡死
+
+```bash
+# 强制卸载
+diskutil unmount force ~/mnt/my-server__projects_train
+
+# 重新绑定
+bind-server my-server ~/projects/train
+```
+
+### 不在 tmux 里运行
+
+脚本检测到不在 tmux 时，直接 `cd` 进挂载目录并启动 Claude，不建立左右布局。建议在 tmux session 里使用以获得完整体验。
+
+---
+
+## 原理总结
+
+```
+用户输入: bind-server my-server ~/projects/train
+            │
+            ├─ 1. SSH 连接服务器，展开 ~ 为绝对路径
+            │
+            ├─ 2. sshfs 挂载
+            │     my-server:~/projects/train
+            │     → ~/mnt/my-server__projects_train/
+            │
+            ├─ 3. 写入 CLAUDE.md（上下文规则注入）
+            │
+            └─ 4. tmux 分屏
+                  左 pane: ssh -t my-server 'cd ~/projects/train && exec $SHELL'
+                  右 pane: claude（工作目录 = 挂载目录）
+
+Claude 启动后:
+  读 train.py    → FUSE → SSH → 服务器磁盘（透明）
+  写 train.py    → FUSE → SSH → 服务器磁盘（透明）
+  执行命令       → ssh my-server "cmd"（ControlMaster 复用，~50ms）
+  训练 / 推理    → ssh my-server "python train.py"（全在服务器端）
+```

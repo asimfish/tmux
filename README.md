@@ -361,6 +361,7 @@ Ctrl-w s   # 弹出 session 列表，方向键选择 + Enter 确认
 | [Codex 工作流](docs/codex.md) | 批量任务调度、进度监控、结果汇总 |
 | [OpenClaw 工作流](docs/openclaw.md) | 长任务管理、日志追踪、断线恢复 |
 | [远程 SSH 工作流](docs/remote-ssh.md) | sshfs 挂载远程目录，体验等同在服务器上直接开 Claude；bind-server 一键建立布局 |
+| [bind-server 详解](docs/bind-server.md) | 原理剖析、完整安装、参数说明、多服务器并行、常见问题排查 |
 | [快捷键手册](docs/keybindings.md) | tmux 原生 + Ghostty 统一键位完整对照表 |
 | [进阶技巧](docs/tips.md) | 脚本自动化、命名规范、快照恢复 |
 
