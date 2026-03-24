@@ -129,41 +129,45 @@ tmux
 
 ### 核心快捷键
 
+> 两套键位**同时有效**，任选其一。详见 [完整快捷键手册](docs/keybindings.md)。
+
 **Session / Window**
 
-| 快捷键 | 功能 |
-|--------|------|
-| `Ctrl-w s` | 选择 session |
-| `Ctrl-w d` | 退出 tmux（session 保持后台运行）|
-| `Ctrl-w $` | 重命名 session |
-| `Ctrl-w c` | 新建 window |
-| `Ctrl-w w` | 选择 window |
-| `Ctrl-w ,` | 重命名 window |
-| `Ctrl-w n/p` | 下 / 上一个 window |
+| tmux 原生 | Ghostty 统一 | 功能 |
+|-----------|-------------|------|
+| `Ctrl-w s` | — | 选择 session |
+| `Ctrl-w d` | — | 退出 tmux（session 保持后台运行）|
+| `Ctrl-w c` | `Cmd+T` | 新建 window |
+| `Ctrl-w x` | `Cmd+W` | 关闭当前 pane |
+| `Ctrl-w n` | `Cmd+Shift+]` | 下一个 window |
+| `Ctrl-w p` | `Cmd+Shift+[` | 上一个 window |
+| `Ctrl-w ,` | — | 重命名 window |
 
 **Pane 分栏**
 
-| 快捷键 | 功能 |
-|--------|------|
-| `Ctrl-w \|` | 左右分栏 |
-| `Ctrl-w -` | 上下分栏 |
-| `Ctrl-w h/j/k/l` | 切换 pane（vim 风格）|
-| `Ctrl-w z` | 放大 / 还原当前 pane |
-| `Ctrl-w x` | 关闭当前 pane |
+| tmux 原生 | Ghostty 统一 | 功能 |
+|-----------|-------------|------|
+| `Ctrl-w \|` | `Cmd+D` | 左右分栏 |
+| `Ctrl-w -` | `Cmd+Shift+D` | 上下分栏 |
+| `Ctrl-w h/j/k/l` | `Cmd+Shift+H/J/K/L` | 切换 pane |
+| `Ctrl-w z` | `Cmd+Shift+Enter` | 放大 / 还原当前 pane |
+| `Ctrl-w =` | `Cmd+Shift+=` | 均分所有 pane |
+| `Ctrl-w Ctrl-h/j/k/l` | `Ctrl+Shift+方向键` | 调整 pane 大小 |
 
-**复制 & 配置**
+**复制 & 粘贴**
 
-| 快捷键 | 功能 |
-|--------|------|
-| `Ctrl-w [` | 进入复制模式（可滚动历史）|
-| `v` | 开始选择文字 |
-| `y` | 复制到系统剪贴板 |
+| 操作 | 功能 |
+|------|------|
+| 鼠标拖选 | 自动复制到系统剪贴板，高亮保持（与 Ghostty 一致）|
+| 右键 | 粘贴系统剪贴板 |
+| `Ctrl-w [` → `v` → `y` | 键盘进入复制模式，选中，复制 |
+| `Ctrl-w K` / `Cmd+K` | 清屏 + 清除历史 |
 | `Ctrl-w r` | 重载配置文件 |
 
 **快照恢复**
 
-| 快捷键 | 功能 |
-|--------|------|
+| tmux 原生 | 功能 |
+|-----------|------|
 | `Ctrl-w Ctrl-s` | 手动保存所有 session 布局 |
 | `Ctrl-w Ctrl-r` | 恢复保存的布局 |
 
