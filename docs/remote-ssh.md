@@ -1,189 +1,167 @@
 # 远程 SSH + 本地 Claude Code 统一工作流
 
-> **核心原则**：Claude Code 始终运行在本地，SSH 连接放在旁边的 pane。
-> 配置、历史、API key 全在本地，无需在服务器上重复配置。
+> **核心原则**：Claude Code 始终运行在本地，通过 sshfs 挂载远程目录，
+> 体验与「在服务器上直接开 Claude」完全一致。
 
 ---
 
-## 为什么这样做
+## 方案对比
 
 | 方案 | 优点 | 缺点 |
 |------|------|------|
-| **本地 Claude + SSH pane（推荐）** | 配置/历史完全统一，无需服务器装 claude | 需要通过 SSH 命令操作远程文件 |
+| **sshfs 挂载 + bind-server（推荐）** | 编辑文件无感，体验等同本地；配置/历史统一在本地 | 需要 macFUSE，首次安装要重启 Mac |
+| 本地 Claude + SSH 命令 | 零安装 | 每次操作文件需手写 SSH 前缀 |
 | 服务器装 Claude | Claude 直接读写远程文件 | 需每台服务器配置 API key，历史分散 |
-| sshfs 挂载 | 本地 Claude 直接读写远程文件 | 网络延迟影响体验，连接断开会卡住 |
 
 ---
 
-## 推荐布局
+## 一键安装（macOS）
 
-```
-┌──────────────────────┬───────────────────┐
-│                      │                   │
-│   SSH 到远程服务器    │   本地 Claude     │
-│   （跑代码 / GPU）   │   （AI 助手）      │
-│                      │                   │
-├──────────────────────┴───────────────────┤
-│           本地日志 / 文件对比             │
-└──────────────────────────────────────────┘
-```
-
-搭建步骤：
+### 1. 安装 macFUSE + sshfs
 
 ```bash
-# 1. 新建 session
-tmux new -s robot
-
-# 2. 左右分栏
-Ctrl-w |      # 或 Cmd+D
-
-# 3. 左侧：SSH 到服务器
-Ctrl-w h
-ssh user@your-server
-
-# 4. 右侧：本地启动 Claude Code
-Ctrl-w l
-claude
+brew install --cask macfuse          # 安装内核扩展，需要重启 Mac
+brew install gromgit/fuse/sshfs-mac  # 安装后可直接使用
 ```
 
----
+重启 Mac 后，进入「系统设置 → 隐私与安全」滚到底，点「允许」macFUSE 内核扩展。
 
-## 让本地 Claude 操作远程文件
+### 2. 配置 SSH ControlMaster（连接复用）
 
-### 方式一：让 Claude 通过 SSH 命令操作（最简单）
-
-直接告诉 Claude 用 SSH 执行命令：
-
-```
-claude> 帮我查看服务器上 ~/robot/src/nav.py 的内容
-        服务器地址是 user@192.168.1.100
-```
-
-Claude 会自动执行：
-```bash
-ssh user@192.168.1.100 cat ~/robot/src/nav.py
-```
-
-### 方式二：配置 SSH 别名（推荐）
-
-在本地 `~/.ssh/config` 里配置好服务器别名，让操作更简洁：
+在 `~/.ssh/config` **开头**加入：
 
 ```ini
-# ~/.ssh/config
-Host robot
-    HostName 192.168.1.100
-    User liyufeng
-    IdentityFile ~/.ssh/id_rsa
+Host *
+    ControlMaster auto
+    ControlPath ~/.ssh/cm/%r@%h:%p
+    ControlPersist 10m
     ServerAliveInterval 60
     ServerAliveCountMax 3
 ```
 
-之后告诉 Claude：
-```
-claude> 服务器别名是 robot，帮我修改 ~/src/controller.py
-```
-
-Claude 执行：
-```bash
-ssh robot cat ~/src/controller.py
-ssh robot "echo '...' > ~/src/controller.py"
-```
-
-### 方式三：rsync 同步（适合大量文件操作）
-
-把远程项目目录同步到本地，Claude 直接操作本地文件，完成后推回：
+创建 socket 目录：
 
 ```bash
-# 拉取远程文件到本地
-rsync -avz robot:~/projects/nav/ ~/local/nav/
-
-# Claude 在本地修改后，推回服务器
-rsync -avz ~/local/nav/ robot:~/projects/nav/
+mkdir -p ~/.ssh/cm
 ```
 
-可以在 tmux 底部 pane 挂一个监控，自动同步：
-```bash
-# 监听本地文件变化，自动推送（需要 fswatch）
-brew install fswatch
-fswatch -o ~/local/nav/ | xargs -n1 -I{} rsync -avz ~/local/nav/ robot:~/projects/nav/
+效果：第一次 `ssh robot` 建立连接后，后续所有 `ssh robot "cmd"` 自动复用该连接，无需重新认证，Claude 执行远程命令速度极快。
+
+### 3. 配置服务器别名
+
+```ini
+# ~/.ssh/config
+Host my-server
+  HostName 192.168.1.100
+  User liyufeng
+  Port 22
 ```
 
 ---
 
-## 实战场景
+## bind-server：一键绑定服务器
 
-### 场景一：Claude 帮你调试远程训练代码
+`scripts/bind-server.sh` 是核心脚本，一条命令完成：
+
+1. sshfs 挂载远程目录到本地 `~/mnt/`
+2. 写入 `CLAUDE.md` 告知 Claude 上下文规则
+3. 在 tmux 里自动建立左右布局：
+   - **左 pane** → SSH 交互会话（你操作）
+   - **右 pane** → 本地 Claude，工作目录 = 挂载目录（AI 操作）
 
 ```bash
-# 左侧 pane：SSH 查看训练日志
-ssh robot
-tail -f ~/train/logs/train.log
+bash scripts/bind-server.sh <ssh别名> <远程路径>
 
-# 右侧 pane：告诉 Claude
-claude> 服务器 robot 上 ~/train/logs/train.log 显示 loss 不收敛，
-        帮我查看 ~/train/src/model.py 并分析原因
+# 示例
+bash scripts/bind-server.sh my-server ~/projects/nav
 ```
 
-Claude 会 SSH 读取文件，分析后给出修改建议，你在左侧 pane 直接应用。
-
-### 场景二：本地写代码，远程跑验证
+建议加 alias 简化调用：
 
 ```bash
-# 右侧 Claude pane
-claude> 帮我实现 src/nav/astar.py 的 A* 算法
-
-# Claude 在本地写好后，左侧 pane 推送并运行
-rsync -avz src/ robot:~/robot/src/
-ssh robot python ~/robot/src/nav/astar.py
+# ~/.zshrc
+alias bind-server="bash ~/tmux-ai/scripts/bind-server.sh"
 ```
 
-### 场景三：多台服务器统一管理
+之后直接：
 
 ```bash
-# 每台服务器开一个 window，Claude 在独立 pane 统一指挥
-tmux new -s servers
+bind-server my-server ~/projects/nav
+```
 
-Ctrl-w c → Ctrl-w , → "gpu-1"   # ssh gpu1
-Ctrl-w c → Ctrl-w , → "gpu-2"   # ssh gpu2
-Ctrl-w c → Ctrl-w , → "claude"  # 本地 Claude，管理所有服务器
+### 布局效果
+
+```
+┌──────────────────────┬───────────────────────┐
+│                      │                       │
+│   SSH 交互会话        │   本地 Claude Code    │
+│   cd ~/projects/nav  │   工作目录 = 挂载目录  │
+│   （你操作）          │   （AI 操作服务器文件）│
+│                      │                       │
+└──────────────────────┴───────────────────────┘
+```
+
+---
+
+## 大文件注意事项
+
+**文件读写走挂载，命令执行走 SSH。**
+
+- sshfs 挂载目录只用于**源代码和配置文件**（小文件），直接读写没有性能问题
+- 训练、推理、数据处理等操作全部通过 SSH 在服务器端执行，**大文件永远不经过本地网络**
+- 模型权重 / 数据集等大文件，让 Claude 用 SSH 命令在服务器端操作：
+
+```bash
+# Claude 执行（不走挂载）
+ssh my-server "cd ~/projects/nav && python train.py"
+ssh my-server "ls -lh ~/data/checkpoints/"
+ssh my-server "tail -f ~/projects/nav/out.log"
+```
+
+---
+
+## 多服务器并行管理
+
+每台服务器开一个 tmux window，用 bind-server 绑定：
+
+```bash
+# window 1：绑定 GPU 服务器 A
+bind-server server-a ~/projects/train
+
+# window 2（Ctrl-w c）：绑定 GPU 服务器 B
+bind-server server-b ~/projects/eval
+```
+
+ControlMaster 保证每个 window 的 Claude pane 执行 SSH 命令时共享已有连接，无额外认证开销。
+
+---
+
+## 卸载挂载目录
+
+```bash
+# 卸载指定挂载点
+umount ~/mnt/my-server__projects_nav
+
+# 或强制卸载（连接已断开时）
+diskutil unmount force ~/mnt/my-server__projects_nav
 ```
 
 ---
 
 ## 保持 SSH 连接稳定
 
-长时间运行任务时，SSH 连接可能断开。tmux 的 session 保活 + SSH 配置组合解决这个问题：
-
-```ini
-# ~/.ssh/config 加入
-Host *
-    ServerAliveInterval 60      # 每 60 秒发心跳
-    ServerAliveCountMax 10      # 最多重试 10 次
-    TCPKeepAlive yes
-```
-
-即使 SSH 断开，远程服务器上的任务仍在 tmux session 里运行：
+长时间运行任务时，即使 SSH 断开，远程服务器上的任务仍在 tmux session 里运行：
 
 ```bash
 # 断线后重连，恢复远程 session
-ssh robot
+ssh my-server
 tmux attach   # 或 tmux ls 查看所有 session
 ```
 
 ---
 
-## Claude Code 历史与配置同步
+## Claude Code 配置同步
 
 Claude Code 的配置和历史存储在本地 `~/.claude/`，完全在你的机器上，无需同步到服务器。
-
-如果你在多台 Mac 之间工作，可以用本仓库的脚本同步配置：
-
-```bash
-# 导出本地 Claude 配置（不含对话历史）
-cp ~/.claude/settings.json ~/tmux-ai/claude-settings.json
-
-# 在另一台 Mac 上导入
-cp ~/tmux-ai/claude-settings.json ~/.claude/settings.json
-```
 
 > API key 不要提交到 git，通过环境变量或手动配置管理。

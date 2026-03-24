@@ -57,20 +57,29 @@ fi
 cat > "$MOUNT_DIR/CLAUDE.md" << CLAUDEEOF
 # 服务器绑定上下文
 
-你正在操作远程服务器，当前目录通过 sshfs 透明挂载，读写文件等同于在服务器上直接操作。
+你正在操作远程服务器 **${SSH_HOST}**，当前目录通过 sshfs 挂载到本地。
 
 - **服务器**：${SSH_HOST}
 - **远程路径**：${REMOTE_PATH}
 - **本地挂载**：${MOUNT_DIR}
 
+## 核心原则
+
+**文件读写走挂载，命令执行走 SSH。**
+
+- 挂载目录只包含源代码和配置文件（小文件），直接读写没有性能问题
+- 训练、推理、数据处理等操作全部通过 SSH 在服务器端执行，大文件永远不经过本地
+- 绝对不要通过挂载目录读写大文件（模型权重 / 数据集），改用 SSH 命令操作
+
 ## 操作规则
 
-- **读写文件**：直接操作当前目录下的文件即可，无需任何 SSH 前缀
-- **执行命令**：用 \`ssh ${SSH_HOST} "cd ${REMOTE_PATH} && <命令>"\` 在服务器上运行
+- **编辑代码 / 配置**：直接操作当前目录下的文件（等同于在服务器上编辑）
+- **执行任何命令**：\`ssh ${SSH_HOST} "cd ${REMOTE_PATH} && <命令>"\`
 - **查看 GPU**：\`ssh ${SSH_HOST} "nvidia-smi"\`
-- **查看进程**：\`ssh ${SSH_HOST} "ps aux | grep python"\`
-- **后台任务**：\`ssh ${SSH_HOST} "cd ${REMOTE_PATH} && nohup python train.py > out.log 2>&1 &"\`
-- **tmux 任务**：\`ssh ${SSH_HOST} "tmux new -d -s train 'cd ${REMOTE_PATH} && python train.py'"\`
+- **查看日志**：\`ssh ${SSH_HOST} "tail -f ${REMOTE_PATH}/out.log"\`
+- **后台训练**：\`ssh ${SSH_HOST} "cd ${REMOTE_PATH} && nohup python train.py > out.log 2>&1 &"\`
+- **tmux 长任务**：\`ssh ${SSH_HOST} "tmux new -d -s train 'cd ${REMOTE_PATH} && python train.py'"\`
+- **查看大文件列表**：\`ssh ${SSH_HOST} "ls -lh ${REMOTE_PATH}/checkpoints/"\`（不要直接 ls 挂载目录下的大文件夹）
 CLAUDEEOF
 
 ok "已写入 CLAUDE.md"
