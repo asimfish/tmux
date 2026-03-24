@@ -306,7 +306,8 @@ Ctrl-w s   # 弹出 session 列表，方向键选择 + Enter 确认
 | [Claude Code 工作流](docs/claude-code.md) | 多项目并行、后台任务、复制粘贴技巧 |
 | [Codex 工作流](docs/codex.md) | 批量任务调度、进度监控、结果汇总 |
 | [OpenClaw 工作流](docs/openclaw.md) | 长任务管理、日志追踪、断线恢复 |
-| [快捷键手册](docs/keybindings.md) | 完整快捷键速查表 |
+| [远程 SSH 工作流](docs/remote-ssh.md) | 本地 Claude 统一管理远程服务器，配置历史不分散 |
+| [快捷键手册](docs/keybindings.md) | tmux 原生 + Ghostty 统一键位完整对照表 |
 | [进阶技巧](docs/tips.md) | 脚本自动化、命名规范、快照恢复 |
 
 ---
