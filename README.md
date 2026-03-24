@@ -240,6 +240,60 @@ Ctrl-w d
 tmux attach -t robot
 ```
 
+### bind-server：一键绑定远程服务器，体验等同本地
+
+> 用 sshfs 把服务器目录挂载到本地，Claude 直接读写远程文件，执行命令走 ControlMaster 复用连接，**无感知地在服务器上「开了一个 Claude」**。
+
+**前置安装（只需一次）：**
+
+```bash
+brew install --cask macfuse          # 安装后重启 Mac，在「系统设置 → 隐私与安全」点允许
+brew install gromgit/fuse/sshfs-mac
+```
+
+**使用：**
+
+```bash
+bash scripts/bind-server.sh <ssh别名> <远程路径>
+
+# 示例：绑定到 GPU 服务器的训练目录
+bash scripts/bind-server.sh my-server ~/projects/train
+```
+
+自动完成：
+
+```
+┌──────────────────────┬───────────────────────┐
+│                      │                       │
+│   SSH 交互会话        │   本地 Claude Code    │
+│   cd ~/projects/nav  │   工作目录 = 挂载目录  │
+│   （你操作）          │   （AI 直接读写文件）  │
+│                      │                       │
+└──────────────────────┴───────────────────────┘
+```
+
+**核心规则：文件读写走挂载（代码/配置），命令执行走 SSH（训练/推理），大文件永不过本地。**
+
+```bash
+# Claude 自动用 ControlMaster 秒连跑命令
+ssh my-server "cd ~/projects/train && python train.py"
+ssh my-server "nvidia-smi"
+```
+
+加 alias 简化调用：
+
+```bash
+# ~/.zshrc
+alias bind-server="bash ~/tmux-ai/scripts/bind-server.sh"
+
+# 之后直接
+bind-server my-server ~/projects/train
+```
+
+> 详细配置和多服务器并行管理见 [远程 SSH 工作流](docs/remote-ssh.md)。
+
+---
+
 ### Codex：批量任务调度
 
 ```bash
