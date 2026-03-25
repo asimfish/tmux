@@ -16,6 +16,60 @@ bash ~/tmux-ai/install.sh
 
 安装内容：Ghostty 终端、tmux + 插件、starship / fzf / zoxide / eza / bat / lazygit 等配套工具，以及本仓库的 `.tmux.conf` 配置。
 
+### 配置你的服务器（可选但推荐）
+
+```bash
+cd ~/tmux-ai
+cp servers.conf.example servers.conf
+```
+
+编辑 `servers.conf`，每行一台服务器：
+
+```
+liyufeng_4090    gpu-4090       ~/projects          4090训练服务器
+liyufeng_a100    gpu-a100       ~/experiments       A100实验服务器
+lab_server       lab            ~/workspace         实验室公共服务器
+```
+
+格式：`别名  SSH地址  远程工作目录  描述`
+
+**前置条件：SSH 免密登录**。只需两步：
+
+```bash
+# 1. 生成密钥（已有则跳过）
+ssh-keygen -t ed25519
+
+# 2. 把公钥发到服务器
+ssh-copy-id user@服务器IP
+```
+
+然后在 `~/.ssh/config` 中配置别名（可选但推荐）：
+
+```
+Host gpu-4090
+    HostName 192.168.1.100
+    User liyufeng
+    Port 22
+    # 复用连接，加速后续 SSH 操作
+    ControlMaster auto
+    ControlPath ~/.ssh/sockets/%r@%h-%p
+    ControlPersist 600
+```
+
+```bash
+mkdir -p ~/.ssh/sockets
+```
+
+配置完成后，下面所有功能都能用了。
+
+加 alias 到 `~/.zshrc` 简化调用：
+
+```bash
+alias login="bash ~/tmux-ai/scripts/login.sh"
+alias smon="bash ~/tmux-ai/scripts/server-monitor.sh"
+alias bind-server="bash ~/tmux-ai/scripts/bind-server.sh"
+```
+
 ---
 
 ## 完整工具链
