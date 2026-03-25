@@ -178,7 +178,7 @@ alias supershell="bash $REPO_DIR/scripts/supershell.sh"
 alias setup-workspace="bash $REPO_DIR/scripts/setup-workspace.sh"
 alias health-check="bash $REPO_DIR/scripts/health-check.sh"
 ALIASEOF
-    ok "已添加 alias：login / smon / bind-server"
+    ok "已添加 alias：login / smon / bind-server / supershell / setup-workspace / health-check"
   else
     ok "alias 已存在，跳过"
   fi
