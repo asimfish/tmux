@@ -322,6 +322,56 @@ smon liyufeng_4090
 
 > 所有服务器并行采集，不会因为一台离线卡住。离线服务器会显示红色状态。
 
+### SuperShell：交互式会话管理器
+
+> 类似截图中的 SuperShell，基于 fzf 的交互式面板，一站式管理所有 tmux session 和远程服务器。
+
+```bash
+# 命令行启动
+supershell
+
+# 在 tmux 中快捷键启动（弹窗模式）
+Ctrl-w S
+```
+
+功能：
+- **模糊搜索**：输入关键字快速定位 session 或服务器
+- **实时预览**：右侧面板显示 session 内容 / 服务器状态
+- **快捷操作**：新建 session、分屏、监控、挂载、刷新配置
+- **一键登录**：选中远程服务器直接 SSH + tmux
+
+更多 tmux 快捷键（`.tmux.conf` 中已配置）：
+
+| 快捷键 | 功能 |
+|--------|------|
+| `Ctrl-w S` | 启动 SuperShell |
+| `Ctrl-w M` | 启动监控面板（弹窗）|
+| `Ctrl-w L` | 快速登录选择器 |
+
+### 一键搭建工作区：`setup-workspace`
+
+```bash
+# 交互式选择模板
+setup-workspace
+
+# 直接指定模板
+setup-workspace dev              # 标准开发布局
+setup-workspace train liyufeng_4090  # 远程训练布局
+setup-workspace multi            # 多服务器并行管理
+setup-workspace claude           # Claude Code 专用
+```
+
+### 健康检查：`health-check`
+
+```bash
+health-check                    # 检查所有服务器
+health-check liyufeng_4090      # 检查指定服务器
+health-check --watch            # 持续监控，异常时 macOS 弹窗告警
+health-check --json             # JSON 输出，供其他工具调用
+```
+
+检查项：GPU 温度、显存、内存使用率、磁盘空间、zombie 进程。超过阈值自动告警。
+
 ### bind-server：本地 Claude 管理远程服务器
 
 > 用 sshfs 把服务器目录挂载到本地，Claude 直接读写远程文件，**无感知地在服务器上「开了一个 Claude」**。
