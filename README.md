@@ -239,7 +239,136 @@ tmux kill-window -t robot:1 # 删除指定 window
 
 ---
 
-## 第三步：AI 工具工作流
+## 第三步：服务器管理
+
+> 配置一次，所有命令自动读取 `servers.conf`。
+
+### 快速登录：`login`
+
+SSH 到服务器并**自动进入远程 tmux**，关掉本机也不会中断服务器上的任务。
+
+```bash
+# 查看所有可用服务器
+login --list
+
+# 一键登录
+login liyufeng_4090
+```
+
+登录逻辑：
+1. SSH 连接到服务器
+2. 如果远程已有同名 tmux session → 自动 attach（恢复之前的工作）
+3. 如果没有 → 自动创建新 tmux session，cd 到配置的工作目录
+4. 从服务器 detach（`Ctrl-w d`）后，所有进程继续运行
+5. 下次 `login liyufeng_4090` 自动恢复
+
+```bash
+# 典型流程
+login liyufeng_4090        # 登录，自动进 tmux
+# ...在服务器上启动训练...
+# Ctrl-w d                 # 退出，训练继续跑
+# 第二天
+login liyufeng_4090        # 自动 attach，查看训练进度
+```
+
+### 多服务器监控：`server-monitor`
+
+类似 nvitop 的多服务器资源面板，实时显示 GPU、CPU、内存、磁盘和远程 tmux session。
+
+```bash
+# 持续刷新监控所有服务器（默认 10s 刷新）
+smon
+
+# 只查一次
+smon --once
+
+# 自定义刷新间隔
+smon --interval 5
+
+# 只监控指定服务器
+smon liyufeng_4090
+```
+
+监控面板效果：
+
+```
+  ╔═══════════════════════════════════════════════════╗
+  ║          🖥  多服务器监控面板  Server Monitor      ║
+  ╚═══════════════════════════════════════════════════╝
+  2026-03-25 10:30:00  |  3 台服务器  |  每 10s 刷新
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ● liyufeng_4090  gpu-4090  4090训练服务器
+    up 15 days
+
+    GPU
+      [0] NVIDIA RTX 4090  使用率 ██████░░░░ 45%  显存 12.3/24.0G ████░░░ 51%  62°C
+      [1] NVIDIA RTX 4090  使用率 ░░░░░░░░░░  0%  显存  0.5/24.0G ░░░░░░░  2%  35°C
+
+    CPU  32 cores  load 4.5  ██████░░░░░░░░░░░░░░ 14%
+    MEM  45.2G / 128.0G     ███████░░░░░░░░░░░░░ 35%
+    DISK 850G / 2000G       ████████░░░░░░░░░░░░ 42%
+
+    tmux sessions
+      ▸ train: 2 windows (created Mon Mar 24 09:00:00 2026)
+      ▸ debug: 1 windows (created Tue Mar 25 08:30:00 2026)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ● liyufeng_a100  gpu-a100  A100实验服务器
+  ...
+```
+
+> 所有服务器并行采集，不会因为一台离线卡住。离线服务器会显示红色状态。
+
+### bind-server：本地 Claude 管理远程服务器
+
+> 用 sshfs 把服务器目录挂载到本地，Claude 直接读写远程文件，**无感知地在服务器上「开了一个 Claude」**。
+
+**前置安装（macOS，只需一次）：**
+
+```bash
+brew install --cask macfuse          # 安装后重启 Mac，在「系统设置 → 隐私与安全」点允许
+brew install gromgit/fuse/sshfs-mac
+```
+
+**使用：**
+
+```bash
+# 方式 1：从 servers.conf 读取（推荐）
+bind-server liyufeng_4090
+
+# 方式 2：直接指定
+bind-server gpu-4090 ~/projects/train
+
+# 批量挂载所有服务器
+bind-server --all
+
+# 查看挂载状态
+bind-server --status
+
+# 卸载
+bind-server --unmount liyufeng_4090
+bind-server --unmount-all
+```
+
+挂载后自动建立 tmux 布局：
+
+```
+┌──────────────────────┬───────────────────────┐
+│                      │                       │
+│   SSH 交互会话        │   本地 Claude Code    │
+│   cd ~/projects/nav  │   工作目录 = 挂载目录  │
+│   （你操作）          │   （AI 直接读写文件）  │
+│                      │                       │
+└──────────────────────┴───────────────────────┘
+```
+
+**核心规则：文件读写走挂载（代码/配置），命令执行走 SSH（训练/推理），大文件永不过本地。**
+
+> 详细配置和原理见 [bind-server 详解](docs/bind-server.md) 和 [远程 SSH 工作流](docs/remote-ssh.md)。
+
+---
+
+## 第四步：AI 工具工作流
 
 ### 标准布局：一个项目三格分屏
 
