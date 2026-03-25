@@ -145,7 +145,50 @@ else
 fi
 
 # ──────────────────────────────────────────
-# 7. 安装 Ghostty 配置（macOS）
+# 7. 配置 servers.conf 模板
+# ──────────────────────────────────────────
+if [[ ! -f "$REPO_DIR/servers.conf" ]]; then
+  cp "$REPO_DIR/servers.conf.example" "$REPO_DIR/servers.conf"
+  ok "已创建 servers.conf（请编辑填入你的服务器信息）"
+else
+  ok "servers.conf 已存在，跳过"
+fi
+
+# ──────────────────────────────────────────
+# 8. 设置 shell alias
+# ──────────────────────────────────────────
+SHELL_RC=""
+if [[ -f "$HOME/.zshrc" ]]; then
+  SHELL_RC="$HOME/.zshrc"
+elif [[ -f "$HOME/.bashrc" ]]; then
+  SHELL_RC="$HOME/.bashrc"
+fi
+
+if [[ -n "$SHELL_RC" ]]; then
+  ALIAS_MARKER="# tmux-ai aliases"
+  if ! grep -q "$ALIAS_MARKER" "$SHELL_RC" 2>/dev/null; then
+    log "添加命令别名到 $SHELL_RC..."
+    cat >> "$SHELL_RC" << ALIASEOF
+
+$ALIAS_MARKER
+alias login="bash $REPO_DIR/scripts/login.sh"
+alias smon="bash $REPO_DIR/scripts/server-monitor.sh"
+alias bind-server="bash $REPO_DIR/scripts/bind-server.sh"
+ALIASEOF
+    ok "已添加 alias：login / smon / bind-server"
+  else
+    ok "alias 已存在，跳过"
+  fi
+fi
+
+# ──────────────────────────────────────────
+# 9. 确保 SSH socket 目录存在
+# ──────────────────────────────────────────
+mkdir -p "$HOME/.ssh/sockets" 2>/dev/null
+ok "SSH socket 目录就绪"
+
+# ──────────────────────────────────────────
+# 10. 安装 Ghostty 配置（macOS）
 # ──────────────────────────────────────────
 if $IS_MAC && [[ -f "$REPO_DIR/ghostty.config" ]]; then
   GHOSTTY_CFG_DIR="$HOME/.config/ghostty"
