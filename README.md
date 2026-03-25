@@ -62,12 +62,15 @@ mkdir -p ~/.ssh/sockets
 
 配置完成后，下面所有功能都能用了。
 
-加 alias 到 `~/.zshrc` 简化调用：
+加 alias 到 `~/.zshrc` 简化调用（`install.sh` 会自动添加）：
 
 ```bash
 alias login="bash ~/tmux-ai/scripts/login.sh"
 alias smon="bash ~/tmux-ai/scripts/server-monitor.sh"
 alias bind-server="bash ~/tmux-ai/scripts/bind-server.sh"
+alias supershell="bash ~/tmux-ai/scripts/supershell.sh"
+alias setup-workspace="bash ~/tmux-ai/scripts/setup-workspace.sh"
+alias health-check="bash ~/tmux-ai/scripts/health-check.sh"
 ```
 
 ---
