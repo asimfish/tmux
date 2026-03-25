@@ -484,6 +484,8 @@ Ctrl-w s   # 弹出 session 列表，方向键选择 + Enter 确认
 
 | 文档 | 内容 |
 |------|------|
+| [服务器配置指南](docs/server-config.md) | servers.conf 格式、SSH 免密配置、多服务器管理 |
+| [快速登录 & 监控](docs/server-tools.md) | login 一键登录、server-monitor 多服务器监控面板 |
 | [架构详解](docs/architecture.md) | 三层结构图解、布局模板、设计原则 |
 | [Ghostty 终端配置](docs/ghostty.md) | GPU 加速终端、Quick Terminal、与 tmux 分工 |
 | [Claude Code 工作流](docs/claude-code.md) | 多项目并行、后台任务、复制粘贴技巧 |
