@@ -202,7 +202,7 @@ if $IS_MAC && [[ -f "$REPO_DIR/ghostty.config" ]]; then
 fi
 
 # ──────────────────────────────────────────
-# 8. 完成
+# 11. 完成
 # ──────────────────────────────────────────
 echo ""
 echo -e "${GREEN}${BOLD}✓ 安装完成！${NC}"
@@ -220,5 +220,15 @@ fi
 echo "  3. 安装 tmux 插件：按 Ctrl-w + I（大写 i）等待完成"
 echo "  4. 重载配置：按 Ctrl-w + r"
 echo ""
+echo -e "  ${BOLD}配置服务器（可选）：${NC}"
+echo ""
+echo "  5. 编辑服务器配置：vim $REPO_DIR/servers.conf"
+echo "  6. 测试快速登录：login --list"
+echo "  7. 启动监控面板：smon"
+echo ""
+if [[ -n "$SHELL_RC" ]]; then
+echo -e "  ${YELLOW}提示：请重新打开终端或执行 source $SHELL_RC 使 alias 生效${NC}"
+echo ""
+fi
 echo -e "  ${BLUE}完整教程：${NC}https://github.com/asimfish/tmux"
 echo ""
