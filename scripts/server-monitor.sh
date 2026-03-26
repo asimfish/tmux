@@ -180,66 +180,117 @@ echo "UPTIME|$up"
 REMOTE_SCRIPT
 }
 
-# ── 渲染单台服务器 ────────────────────────────────────────────────
+# ── 渲染单台服务器（卡片式） ─────────────────────────────────────────
 render_server() {
   local alias="$1"
   local host="${HOSTS[$alias]}"
   local desc="${DESCS[$alias]}"
   local tmpfile="/tmp/server_monitor_${alias}.txt"
 
-  # 顶部分隔线
-  echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-
-  # 服务器标题
-  local status_icon="${GREEN}●${NC}"
+  # 离线
   if grep -q "OFFLINE" "$tmpfile" 2>/dev/null; then
-    status_icon="${RED}●${NC}"
-    echo -e "  ${status_icon} ${BOLD}${alias}${NC}  ${DIM}${host}${NC}  ${desc}"
-    echo -e "    ${RED}无法连接${NC}"
+    echo -e "  ${RED}╭─${NC} ${RED}●${NC} ${BOLD}${alias}${NC}  ${DIM}${desc}${NC}"
+    echo -e "  ${RED}│${NC}  ${RED}⚠ 无法连接${NC}"
+    echo -e "  ${RED}╰─────────────────────────────────────────────────────────────────${NC}"
     return
   fi
 
-  echo -e "  ${status_icon} ${BOLD}${alias}${NC}  ${DIM}${host}${NC}  ${desc}"
+  # uptime — compact: "10w 1d 15h" instead of "10 weeks, 1 day, 15 hours, 30 minutes"
+  local uptime_raw
+  uptime_raw=$(grep "^UPTIME|" "$tmpfile" 2>/dev/null | cut -d'|' -f2 | sed 's/^up //')
+  local uptime_short
+  uptime_short=$(echo "$uptime_raw" | sed -E \
+    -e 's/([0-9]+) weeks?/\1w/g' \
+    -e 's/([0-9]+) days?/\1d/g' \
+    -e 's/([0-9]+) hours?/\1h/g' \
+    -e 's/([0-9]+) minutes?/\1m/g' \
+    -e 's/,//g' -e 's/  */ /g')
 
-  # uptime
-  local uptime_str
-  uptime_str=$(grep "^UPTIME|" "$tmpfile" 2>/dev/null | cut -d'|' -f2)
-  [[ -n "$uptime_str" ]] && echo -e "    ${DIM}${uptime_str}${NC}"
-  echo ""
+  local L="${DIM}│${NC}"
 
-  # GPU
+  echo -e "  ${DIM}╭─${NC} ${GREEN}●${NC} ${BOLD}${alias}${NC}  ${DIM}${desc}${NC}  ${DIM}│ ${host} │ up ${uptime_short:-?}${NC}"
+  echo -e "  ${L}"
+
+  # === GPU 汇总（同型号合并） ===
   local has_gpu
   has_gpu=$(grep "^HAS_GPU=" "$tmpfile" 2>/dev/null | cut -d= -f2)
   if [[ "$has_gpu" == "yes" ]]; then
-    echo -e "    ${MAGENTA}GPU${NC}"
-    grep "^GPU|" "$tmpfile" 2>/dev/null | while IFS='|' read -r _ idx name util mem_used mem_total temp power; do
+    local gpu_count=0 first_name="" gpu_total_util=0 gpu_total_mu=0 gpu_total_mt=0
+    local temp_min=999 temp_max=0
+    local per_gpu_info="" util_min=999 util_max=0 mu_min=999999 mu_max=0
+
+    while IFS='|' read -r _ idx name util mem_used mem_total temp power; do
       name=$(echo "$name" | sed 's/^ *//')
-      util=$(echo "${util:-0}" | tr -cd '0-9')
-      mem_used=$(echo "${mem_used:-0}" | tr -cd '0-9')
-      mem_total=$(echo "${mem_total:-1}" | tr -cd '0-9')
-      temp=$(echo "${temp:-0}" | tr -cd '0-9.')
-      power=$(echo "${power:-}" | tr -cd '0-9.')
-      [[ -z "$mem_total" || "$mem_total" -eq 0 ]] 2>/dev/null && mem_total=1
+      util=$(echo "${util:-0}" | tr -cd '0-9'); util=${util:-0}
+      mem_used=$(echo "${mem_used:-0}" | tr -cd '0-9'); mem_used=${mem_used:-0}
+      mem_total=$(echo "${mem_total:-1}" | tr -cd '0-9'); mem_total=${mem_total:-1}
+      temp=$(echo "${temp:-0}" | tr -cd '0-9'); temp=${temp:-0}
+
+      gpu_count=$((gpu_count + 1))
+      [[ -z "$first_name" ]] && first_name="$name"
+      gpu_total_util=$((gpu_total_util + util))
+      gpu_total_mu=$((gpu_total_mu + mem_used))
+      gpu_total_mt=$((gpu_total_mt + mem_total))
+      [[ $temp -lt $temp_min ]] && temp_min=$temp
+      [[ $temp -gt $temp_max ]] && temp_max=$temp
+      [[ $util -lt $util_min ]] && util_min=$util
+      [[ $util -gt $util_max ]] && util_max=$util
+      [[ $mem_used -lt $mu_min ]] && mu_min=$mem_used
+      [[ $mem_used -gt $mu_max ]] && mu_max=$mem_used
+
+      local mu_g=$(echo "scale=1; $mem_used / 1024" | bc 2>/dev/null || echo "$mem_used")
+      local mt_g=$(echo "scale=1; $mem_total / 1024" | bc 2>/dev/null || echo "$mem_total")
       local mem_pct=0
-      mem_pct=$((mem_used * 100 / mem_total))
+      [[ $mem_total -gt 0 ]] && mem_pct=$((mem_used * 100 / mem_total))
 
-      local mem_used_g mem_total_g
-      mem_used_g=$(echo "scale=1; $mem_used / 1024" | bc 2>/dev/null || echo "$mem_used")
-      mem_total_g=$(echo "scale=1; $mem_total / 1024" | bc 2>/dev/null || echo "$mem_total")
+      local u_color="$GREEN"
+      [[ $util -ge 50 ]] && u_color="$YELLOW"
+      [[ $util -ge 80 ]] && u_color="$RED"
+      local m_color="$GREEN"
+      [[ $mem_pct -ge 50 ]] && m_color="$YELLOW"
+      [[ $mem_pct -ge 80 ]] && m_color="$RED"
 
-      echo -ne "      [${idx}] ${CYAN}${name}${NC}  "
-      echo -ne "使用率 "
-      bar "${util:-0}" 15
-      echo -ne "  显存 ${mem_used_g}/${mem_total_g}G "
-      bar "$mem_pct" 10
-      echo -ne "  ${temp:-?}°C"
-      [[ -n "$power" ]] && echo -ne "  ${power}W"
-      echo ""
-    done
+      per_gpu_info+="      ${DIM}[${idx}]${NC} ${u_color}$(printf '%3d' $util)%${NC}  ${m_color}${mu_g}${NC}/${mt_g}G  ${DIM}${temp}°C${NC}\n"
+    done <<< "$(grep "^GPU|" "$tmpfile" 2>/dev/null)"
+
+    local avg_util=0
+    [[ $gpu_count -gt 0 ]] && avg_util=$((gpu_total_util / gpu_count))
+    local total_mu_g=$(echo "scale=1; $gpu_total_mu / 1024" | bc 2>/dev/null || echo "?")
+    local total_mt_g=$(echo "scale=0; $gpu_total_mt / 1024" | bc 2>/dev/null || echo "?")
+    local total_mem_pct=0
+    [[ $gpu_total_mt -gt 0 ]] && total_mem_pct=$((gpu_total_mu * 100 / gpu_total_mt))
+
+    local gpu_color="$GREEN"
+    [[ $avg_util -ge 50 ]] && gpu_color="$YELLOW"
+    [[ $avg_util -ge 80 ]] && gpu_color="$RED"
+
+    local temp_str="${temp_min}"
+    [[ $gpu_count -gt 1 ]] && temp_str="${temp_min}-${temp_max}"
+
+    echo -ne "  ${L}  ${MAGENTA}GPU${NC}  ${BOLD}${gpu_count}×${first_name}${NC}"
+    echo -e "  ${DIM}avg${NC} ${gpu_color}${avg_util}%${NC}  ${DIM}vram${NC} ${total_mu_g}/${total_mt_g}G"
+    echo -ne "  ${L}       "
+    echo -ne "util "
+    bar "$avg_util" 18
+    echo -ne "   mem "
+    bar "$total_mem_pct" 18
+    echo -ne "   ${DIM}${temp_str}°C${NC}"
     echo ""
+
+    # only show per-card when there's meaningful variance (>5% util or >2G mem)
+    local util_spread=$((util_max - util_min))
+    local mu_spread=$((mu_max - mu_min))
+    if [[ $gpu_count -gt 1 && ($util_spread -gt 5 || $mu_spread -gt 2048) ]]; then
+      echo -ne "$per_gpu_info" | while IFS= read -r line; do
+        echo -e "  ${L}  $line"
+      done
+    fi
+    echo -e "  ${L}"
   fi
 
-  # CPU
+  # === CPU / MEM / DISK 横排 ===
+  local cpu_str="" mem_str="" disk_str=""
+
   local cpu_line
   cpu_line=$(grep "^CPU|" "$tmpfile" 2>/dev/null)
   if [[ -n "$cpu_line" ]]; then
@@ -249,30 +300,27 @@ render_server() {
     cpu_pct=$(echo "scale=0; $load * 100 / $cores" | bc 2>/dev/null || echo "0")
     [[ $cpu_pct -gt 100 ]] && cpu_pct=100
 
-    echo -ne "    ${BLUE}CPU${NC}  ${cores} cores  load ${load}  "
-    bar "$cpu_pct" 20
-    echo ""
+    echo -ne "  ${L}  ${BLUE}CPU${NC}  "
+    bar "$cpu_pct" 12
+    echo -e "  ${load}/${cores} cores"
   fi
 
-  # 内存
   local mem_line
   mem_line=$(grep "^MEM|" "$tmpfile" 2>/dev/null)
   if [[ -n "$mem_line" ]]; then
     local mem_used mem_total mem_pct
     mem_used=$(echo "$mem_line" | cut -d'|' -f2)
     mem_total=$(echo "$mem_line" | cut -d'|' -f3)
+    [[ -z "$mem_total" || "$mem_total" -eq 0 ]] 2>/dev/null && mem_total=1
     mem_pct=$((mem_used * 100 / mem_total))
+    local mem_used_g=$(echo "scale=1; $mem_used / 1048576" | bc 2>/dev/null || echo "?")
+    local mem_total_g=$(echo "scale=1; $mem_total / 1048576" | bc 2>/dev/null || echo "?")
 
-    local mem_used_g mem_total_g
-    mem_used_g=$(echo "scale=1; $mem_used / 1048576" | bc 2>/dev/null || echo "?")
-    mem_total_g=$(echo "scale=1; $mem_total / 1048576" | bc 2>/dev/null || echo "?")
-
-    echo -ne "    ${GREEN}MEM${NC}  ${mem_used_g}G / ${mem_total_g}G  "
-    bar "$mem_pct" 20
-    echo ""
+    echo -ne "  ${L}  ${GREEN}MEM${NC}  "
+    bar "$mem_pct" 12
+    echo -e "  ${mem_used_g}G / ${mem_total_g}G"
   fi
 
-  # 磁盘
   local disk_line
   disk_line=$(grep "^DISK|" "$tmpfile" 2>/dev/null)
   if [[ -n "$disk_line" ]]; then
@@ -281,33 +329,43 @@ render_server() {
     disk_total=$(echo "$disk_line" | cut -d'|' -f3)
     disk_pct=$(echo "$disk_line" | cut -d'|' -f4)
 
-    echo -ne "    ${YELLOW}DISK${NC} ${disk_used}G / ${disk_total}G  "
-    bar "${disk_pct:-0}" 20
-    echo ""
+    echo -ne "  ${L}  ${YELLOW}DSK${NC}  "
+    bar "${disk_pct:-0}" 12
+    echo -e "  ${disk_used}G / ${disk_total}G"
   fi
 
-  # GPU 进程
+  # === tmux sessions（单行） ===
+  local tmux_lines
+  tmux_lines=$(grep "^TMUX|" "$tmpfile" 2>/dev/null)
+  if [[ -n "$tmux_lines" ]]; then
+    local tmux_count=$(echo "$tmux_lines" | wc -l | tr -cd '0-9')
+    local sess_names=""
+    while IFS='|' read -r _ session_info; do
+      local sname=$(echo "$session_info" | cut -d: -f1 | xargs)
+      if echo "$session_info" | grep -q "(attached)"; then
+        sess_names+="${GREEN}${sname}*${NC} "
+      else
+        sess_names+="${DIM}${sname}${NC} "
+      fi
+    done <<< "$tmux_lines"
+    echo -e "  ${L}  ${CYAN}TMX${NC}  ${tmux_count} sessions: ${sess_names}"
+  fi
+
+  # === GPU 进程（如果开启） ===
   if $SHOW_PROCS; then
     local proc_lines
     proc_lines=$(grep "^GPROC|" "$tmpfile" 2>/dev/null)
     if [[ -n "$proc_lines" ]]; then
-      echo -e "\n    ${MAGENTA}GPU Processes${NC}"
-      printf "      ${DIM}%-6s %-6s %-10s %s${NC}\n" "GPU" "PID" "显存(MiB)" "进程"
+      echo -e "  ${L}"
+      echo -e "  ${L}  ${MAGENTA}进程${NC}  ${DIM}GPU   PID      显存       命令${NC}"
       while IFS='|' read -r _ gpu_idx pid mem pname; do
-        printf "      %-6s %-6s %-10s %s\n" "[$gpu_idx]" "$pid" "${mem}" "$pname"
+        local pshort=$(basename "$pname" 2>/dev/null || echo "$pname")
+        printf "  ${L}        ${DIM}[%s]${NC}   %-8s %-8sM  %s\n" "$gpu_idx" "$pid" "$mem" "$pshort"
       done <<< "$proc_lines"
     fi
   fi
 
-  # tmux sessions
-  local tmux_lines
-  tmux_lines=$(grep "^TMUX|" "$tmpfile" 2>/dev/null)
-  if [[ -n "$tmux_lines" ]]; then
-    echo -e "\n    ${CYAN}tmux sessions${NC}"
-    while IFS='|' read -r _ session_info; do
-      echo -e "      ${DIM}▸${NC} $session_info"
-    done <<< "$tmux_lines"
-  fi
+  echo -e "  ${DIM}╰─────────────────────────────────────────────────────────────────${NC}"
 }
 
 # ── 紧凑模式渲染 ─────────────────────────────────────────────────
@@ -395,15 +453,17 @@ render_server_compact() {
 render_all() {
   clear
 
-  echo -e "\n${BOLD}  ╔═══════════════════════════════════════════════════╗${NC}"
-  echo -e "${BOLD}  ║          🖥  多服务器监控面板  Server Monitor      ║${NC}"
-  echo -e "${BOLD}  ╚═══════════════════════════════════════════════════╝${NC}"
-
+  local now=$(date '+%Y-%m-%d %H:%M:%S')
+  local n=${#ALIASES[@]}
   local mode_str="详细"
   $COMPACT && mode_str="紧凑"
   local procs_str=""
   $SHOW_PROCS && procs_str=" +进程"
-  echo -e "  ${DIM}$(date '+%Y-%m-%d %H:%M:%S')  |  ${#ALIASES[@]} 台服务器  |  每 ${INTERVAL}s 刷新  |  ${mode_str}${procs_str}  |  Ctrl+C 退出${NC}\n"
+
+  echo ""
+  echo -e "  ${BOLD}🖥  Server Monitor${NC}  ${DIM}${n} servers · ${INTERVAL}s · ${mode_str}${procs_str} · ${now}${NC}"
+  echo -e "  ${DIM}────────────────────────────────────────────────────────────────────${NC}"
+  echo ""
 
   # 并行采集所有服务器
   local pids=()
@@ -427,13 +487,13 @@ render_all() {
     done
     echo -e "  ${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
   else
-    # 详细模式：每服务器完整信息
+    # 详细模式：每服务器卡片
     for alias in "${ALIASES[@]}"; do
       render_server "$alias"
       echo ""
     done
-    echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
   fi
+  echo -e "  ${DIM}Ctrl+C 退出${NC}"
 }
 
 # ── 入口 ──────────────────────────────────────────────────────────
