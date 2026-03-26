@@ -1,0 +1,11 @@
+# 包含私有服务器信息，不提交
+servers.conf
+
+# macOS
+.DS_Store
+
+# 临时文件
+/tmp/
+*.swp
+*.swo
+*~

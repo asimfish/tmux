@@ -26,31 +26,23 @@ cp servers.conf.example servers.conf
 编辑 `servers.conf`，每行一台服务器：
 
 ```
-liyufeng_4090    gpu-4090       ~/projects          4090训练服务器
-liyufeng_a100    gpu-a100       ~/experiments       A100实验服务器
-lab_server       lab            ~/workspace         实验室公共服务器
+# 格式：别名  SSH地址  远程工作目录  密码(无则填-)  描述
+liyufeng_4090    gpu-4090       ~/projects       -                  4090训练服务器
+liyufeng_a100    gpu-a100       ~/experiments    -                  A100实验服务器
+cloud_gpu        cloud-host     ~/               myP@ssw0rd123      云GPU（密码登录）
 ```
 
-格式：`别名  SSH地址  远程工作目录  描述`
+- **密码字段**填 `-` 表示公钥登录（推荐），填实际密码则自动通过 `sshpass` 免输入登录
+- `servers.conf` 已加入 `.gitignore`，不会被提交到仓库
+- 安装脚本会自动 `chmod 600 servers.conf` 限制权限
 
-**前置条件：SSH 免密登录**。只需两步：
-
-```bash
-# 1. 生成密钥（已有则跳过）
-ssh-keygen -t ed25519
-
-# 2. 把公钥发到服务器
-ssh-copy-id user@服务器IP
-```
-
-然后在 `~/.ssh/config` 中配置别名（可选但推荐）：
+**SSH 配置**：在 `~/.ssh/config` 中配置 Host 别名（`servers.conf` 中的 SSH 地址对应这里的 Host）：
 
 ```
 Host gpu-4090
     HostName 192.168.1.100
     User liyufeng
     Port 22
-    # 复用连接，加速后续 SSH 操作
     ControlMaster auto
     ControlPath ~/.ssh/sockets/%r@%h-%p
     ControlPersist 600
@@ -60,6 +52,13 @@ Host gpu-4090
 mkdir -p ~/.ssh/sockets
 ```
 
+**公钥登录**（推荐）：
+
+```bash
+ssh-keygen -t ed25519                 # 生成密钥（已有则跳过）
+ssh-copy-id user@服务器IP              # 发公钥到服务器
+```
+
 配置完成后，下面所有功能都能用了。
 
 加 alias 到 `~/.zshrc` 简化调用（`install.sh` 会自动添加）：
@@ -67,10 +66,13 @@ mkdir -p ~/.ssh/sockets
 ```bash
 alias login="bash ~/tmux-ai/scripts/login.sh"
 alias smon="bash ~/tmux-ai/scripts/server-monitor.sh"
+alias sexec="bash ~/tmux-ai/scripts/server-exec.sh"
+alias gpum="bash ~/tmux-ai/scripts/gpu-manager.sh"
 alias bind-server="bash ~/tmux-ai/scripts/bind-server.sh"
 alias supershell="bash ~/tmux-ai/scripts/supershell.sh"
 alias setup-workspace="bash ~/tmux-ai/scripts/setup-workspace.sh"
 alias health-check="bash ~/tmux-ai/scripts/health-check.sh"
+alias wizard="bash ~/tmux-ai/scripts/wizard.sh"
 ```
 
 ---
@@ -348,6 +350,48 @@ Ctrl-w S
 | `Ctrl-w M` | 启动监控面板（弹窗）|
 | `Ctrl-w L` | 快速登录选择器 |
 
+### 批量执行命令：`server-exec`
+
+在多台服务器上同时执行命令，内置常用快捷指令。
+
+```bash
+# 所有服务器执行
+sexec "nvidia-smi"
+
+# 指定服务器
+sexec -s pro13 "df -h ~"
+
+# 交互模式
+sexec -i
+
+# 内置快捷命令
+sexec gpu          # 所有服务器 GPU 状态
+sexec tmux-ls      # 所有服务器 tmux sessions
+sexec disk         # 磁盘使用
+```
+
+### GPU 进程管理：`gpu-manager`
+
+跨服务器 GPU 进程管理，支持查看和远程 kill。
+
+```bash
+gpum              # fzf 交互式查看 + kill
+gpum --list       # 列出所有 GPU 进程
+gpum --free       # 查找空闲 GPU
+gpum --kill pro13 12345  # 远程 kill 进程
+```
+
+### 配置向导：`wizard`
+
+交互式添加/删除/测试服务器，以及 SSH 免密配置。
+
+```bash
+wizard             # 主菜单
+wizard add         # 添加服务器
+wizard test        # 测试所有连通性
+wizard ssh-setup   # SSH 密钥配置
+```
+
 ### 一键搭建工作区：`setup-workspace`
 
 ```bash
@@ -538,7 +582,8 @@ Ctrl-w s   # 弹出 session 列表，方向键选择 + Enter 确认
 | 文档 | 内容 |
 |------|------|
 | [服务器配置指南](docs/server-config.md) | servers.conf 格式、SSH 免密配置、多服务器管理 |
-| [快速登录 & 监控](docs/server-tools.md) | login 一键登录、server-monitor 多服务器监控面板 |
+| [快速登录 & 监控](docs/server-tools.md) | login 一键登录、server-monitor 多服务器监控面板、健康检查 |
+| [SuperShell & 工作区](docs/supershell.md) | 交互式会话管理器、工作区模板、tmux 快捷键 |
 | [架构详解](docs/architecture.md) | 三层结构图解、布局模板、设计原则 |
 | [Ghostty 终端配置](docs/ghostty.md) | GPU 加速终端、Quick Terminal、与 tmux 分工 |
 | [Claude Code 工作流](docs/claude-code.md) | 多项目并行、后台任务、复制粘贴技巧 |

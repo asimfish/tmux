@@ -1,0 +1,27 @@
+# servers.conf — 服务器配置文件
+# 复制此文件为 servers.conf 并填入你的服务器信息
+#
+# 格式（每行一个服务器，# 开头为注释）：
+#   别名  SSH地址  远程工作目录  密码  [描述]
+#
+# 说明：
+#   别名       — 登录时使用的名字，如 login liyufeng_4090
+#   SSH地址    — 对应 ~/.ssh/config 中的 Host，或 user@ip 格式
+#   远程工作目录 — 登录后自动 cd 到的目录
+#   密码       — SSH 密码，自动通过 sshpass 输入。公钥登录填 -
+#   描述       — 可选，显示在监控面板中
+#
+# 安全须知：
+#   - 此文件已加入 .gitignore，不会被提交到 Git
+#   - 文件权限会被自动设为 600（仅本人可读写）
+#   - 建议优先使用公钥登录（密码填 -）
+#
+# 前置条件：
+#   - 公钥登录：确保 SSH 免密登录已配置（见 README）
+#   - 密码登录：需要安装 sshpass（brew install sshpass）
+#
+# ── 示例 ──────────────────────────────────────────────────────
+# liyufeng_4090    gpu-4090       ~/projects     -                        4090训练服务器
+# liyufeng_a100    gpu-a100       ~/experiments  -                        A100实验服务器
+# cloud_gpu        cloud-host     ~/             MyPassword123            云GPU服务器(密码)
+# lab_server       lab            ~/workspace    -                        实验室公共服务器

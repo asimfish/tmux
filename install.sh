@@ -99,8 +99,14 @@ fi
 log "安装配套工具（starship / fzf / zoxide / eza / bat / lazygit 等）..."
 
 if $IS_MAC; then
-  TOOLS=(starship zsh-autosuggestions zsh-syntax-highlighting fzf zoxide eza bat \
+  TOOLS=(bash starship zsh-autosuggestions zsh-syntax-highlighting fzf zoxide eza bat \
          ripgrep fd git-delta lazygit tldr btop)
+
+  # sshpass 需要特殊处理（密码自动登录）
+  if ! command -v sshpass &>/dev/null; then
+    log "安装 sshpass（密码自动登录）..."
+    brew install esolitos/ipa/sshpass 2>/dev/null || brew install sshpass 2>/dev/null || warn "sshpass 安装失败，密码登录功能不可用"
+  fi
   for tool in "${TOOLS[@]}"; do
     if ! brew list "$tool" &>/dev/null; then
       brew install "$tool" && ok "$tool 安装完成"
@@ -177,6 +183,9 @@ alias bind-server="bash $REPO_DIR/scripts/bind-server.sh"
 alias supershell="bash $REPO_DIR/scripts/supershell.sh"
 alias setup-workspace="bash $REPO_DIR/scripts/setup-workspace.sh"
 alias health-check="bash $REPO_DIR/scripts/health-check.sh"
+alias server-exec="bash $REPO_DIR/scripts/server-exec.sh"
+alias gpu-manager="bash $REPO_DIR/scripts/gpu-manager.sh"
+alias server-wizard="bash $REPO_DIR/scripts/wizard.sh"
 ALIASEOF
     ok "已添加 alias：login / smon / bind-server / supershell / setup-workspace / health-check"
   else
