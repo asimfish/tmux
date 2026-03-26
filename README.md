@@ -64,7 +64,7 @@ ssh-copy-id user@服务器IP              # 发公钥到服务器
 加 alias 到 `~/.zshrc` 简化调用（`install.sh` 会自动添加）：
 
 ```bash
-alias login="bash ~/tmux-ai/scripts/login.sh"
+alias slogin="bash ~/tmux-ai/scripts/login.sh"
 alias smon="bash ~/tmux-ai/scripts/server-monitor.sh"
 alias sexec="bash ~/tmux-ai/scripts/server-exec.sh"
 alias gpum="bash ~/tmux-ai/scripts/gpu-manager.sh"
@@ -248,16 +248,18 @@ tmux kill-window -t robot:1 # 删除指定 window
 
 > 配置一次，所有命令自动读取 `servers.conf`。
 
-### 快速登录：`login`
+### 快速登录：`slogin`
 
 SSH 到服务器并**自动进入远程 tmux**，关掉本机也不会中断服务器上的任务。
 
+> 注意：不要用 `login` 作为 alias，它会和 macOS 系统命令 `/usr/bin/login` 冲突。
+
 ```bash
 # 查看所有可用服务器
-login --list
+slogin --list
 
 # 一键登录
-login liyufeng_4090
+slogin liyufeng_4090
 ```
 
 登录逻辑：
@@ -265,15 +267,15 @@ login liyufeng_4090
 2. 如果远程已有同名 tmux session → 自动 attach（恢复之前的工作）
 3. 如果没有 → 自动创建新 tmux session，cd 到配置的工作目录
 4. 从服务器 detach（`Ctrl-w d`）后，所有进程继续运行
-5. 下次 `login liyufeng_4090` 自动恢复
+5. 下次 `slogin liyufeng_4090` 自动恢复
 
 ```bash
 # 典型流程
-login liyufeng_4090        # 登录，自动进 tmux
+slogin liyufeng_4090       # 登录，自动进 tmux
 # ...在服务器上启动训练...
 # Ctrl-w d                 # 退出，训练继续跑
 # 第二天
-login liyufeng_4090        # 自动 attach，查看训练进度
+slogin liyufeng_4090       # 自动 attach，查看训练进度
 ```
 
 ### 多服务器监控：`server-monitor`
@@ -582,7 +584,7 @@ Ctrl-w s   # 弹出 session 列表，方向键选择 + Enter 确认
 | 文档 | 内容 |
 |------|------|
 | [服务器配置指南](docs/server-config.md) | servers.conf 格式、SSH 免密配置、多服务器管理 |
-| [快速登录 & 监控](docs/server-tools.md) | login 一键登录、server-monitor 多服务器监控面板、健康检查 |
+| [快速登录 & 监控](docs/server-tools.md) | slogin 一键登录、server-monitor 多服务器监控面板、健康检查 |
 | [SuperShell & 工作区](docs/supershell.md) | 交互式会话管理器、工作区模板、tmux 快捷键 |
 | [架构详解](docs/architecture.md) | 三层结构图解、布局模板、设计原则 |
 | [Ghostty 终端配置](docs/ghostty.md) | GPU 加速终端、Quick Terminal、与 tmux 分工 |

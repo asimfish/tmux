@@ -177,17 +177,17 @@ if [[ -n "$SHELL_RC" ]]; then
     cat >> "$SHELL_RC" << ALIASEOF
 
 $ALIAS_MARKER
-alias login="bash $REPO_DIR/scripts/login.sh"
+alias slogin="bash $REPO_DIR/scripts/login.sh"
 alias smon="bash $REPO_DIR/scripts/server-monitor.sh"
+alias sexec="bash $REPO_DIR/scripts/server-exec.sh"
+alias gpum="bash $REPO_DIR/scripts/gpu-manager.sh"
 alias bind-server="bash $REPO_DIR/scripts/bind-server.sh"
 alias supershell="bash $REPO_DIR/scripts/supershell.sh"
 alias setup-workspace="bash $REPO_DIR/scripts/setup-workspace.sh"
 alias health-check="bash $REPO_DIR/scripts/health-check.sh"
-alias server-exec="bash $REPO_DIR/scripts/server-exec.sh"
-alias gpu-manager="bash $REPO_DIR/scripts/gpu-manager.sh"
-alias server-wizard="bash $REPO_DIR/scripts/wizard.sh"
+alias wizard="bash $REPO_DIR/scripts/wizard.sh"
 ALIASEOF
-    ok "已添加 alias：login / smon / bind-server / supershell / setup-workspace / health-check"
+    ok "已添加 alias：slogin / smon / sexec / gpum / bind-server / supershell / health-check / wizard"
   else
     ok "alias 已存在，跳过"
   fi
